@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Databases
+backend/tasktracker.db
+backend/tasktracker.db-journal
+
+# Build directories
+dist/
+build/
+out/
+
+# System files
+.DS_Store
+Thumbs.db

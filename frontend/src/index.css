@@ -1,0 +1,195 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* Global variables for premium dark theme */
+:root {
+  --bg-primary: #0a0c10;
+  --bg-secondary: #131722;
+  --bg-tertiary: #1b2030;
+  --glass-bg: rgba(19, 23, 34, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  
+  --accent-purple: #8a2be2;
+  --accent-purple-glow: rgba(138, 43, 226, 0.35);
+  --accent-cyan: #00f5ff;
+  --accent-cyan-glow: rgba(0, 245, 255, 0.3);
+
+  --text-primary: #f5f6f8;
+  --text-secondary: #9aa0a6;
+  --text-muted: #606870;
+
+  --color-todo: #00f5ff;
+  --color-progress: #ffd700;
+  --color-review: #8a2be2;
+  --color-done: #00ff7f;
+  --color-blocked: #ff4500;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism custom classes */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.glass-panel:hover {
+  border-color: rgba(138, 43, 226, 0.2);
+  box-shadow: 0 12px 40px 0 rgba(138, 43, 226, 0.15);
+}
+
+/* Custom premium buttons */
+.btn-glow-purple {
+  background: linear-gradient(135deg, var(--accent-purple), #5e18a7);
+  color: #fff !important;
+  border: none;
+  box-shadow: 0 4px 15px var(--accent-purple-glow);
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.btn-glow-purple:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+}
+
+.btn-glow-cyan {
+  background: linear-gradient(135deg, #00ced1, var(--accent-cyan));
+  color: #0c0f16 !important;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 4px 15px var(--accent-cyan-glow);
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.btn-glow-cyan:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 245, 255, 0.6);
+}
+
+/* Micro-interactions & animations */
+.glow-text-purple {
+  text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+}
+
+.glow-text-cyan {
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+}
+
+.kanban-column {
+  min-height: 70vh;
+  background: rgba(19, 23, 34, 0.4);
+  border: 1px dashed rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.kanban-card {
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kanban-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Status Indicator Dots */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot-todo { background-color: var(--color-todo); box-shadow: 0 0 8px var(--color-todo); }
+.dot-progress { background-color: var(--color-progress); box-shadow: 0 0 8px var(--color-progress); }
+.dot-review { background-color: var(--color-review); box-shadow: 0 0 8px var(--color-review); }
+.dot-done { background-color: var(--color-done); box-shadow: 0 0 8px var(--color-done); }
+.dot-blocked { background-color: var(--color-blocked); box-shadow: 0 0 8px var(--color-blocked); }
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Form Styles Override for Dark Mode */
+.form-control, .form-select {
+  background-color: var(--bg-tertiary) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-primary) !important;
+  border-radius: 8px !important;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--accent-purple) !important;
+  box-shadow: 0 0 0 0.25rem rgba(138, 43, 226, 0.25) !important;
+}
+
+/* Real-time Toast Banner */
+.notification-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  background: rgba(13, 110, 253, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  animation: slideIn 0.35s ease forwards;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.custom-nav-link {
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.custom-nav-link:hover, .custom-nav-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-nav-link.active {
+  border-bottom: 2px solid var(--accent-cyan);
+}
