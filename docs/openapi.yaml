@@ -1,0 +1,311 @@
+openapi: 3.0.0
+info:
+  title: NxtWave Team Task Tracker REST API
+  description: SDE II Multi-Tenant Team Task Tracker REST API featuring Role-Based Access Control (RBAC), SQLite Database persistence, and Redis in-memory caching.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api
+    description: Docker / Local Dev Server
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      description: Create a new account. If the organizationName does not exist, a new organization is bootstrapped automatically.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+                - organizationName
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minimum: 6
+                name:
+                  type: string
+                organizationName:
+                  type: string
+                role:
+                  type: string
+                  enum: [ADMIN, MANAGER, MEMBER]
+                  default: MEMBER
+      responses:
+        '201':
+          description: User registered successfully
+        '400':
+          description: Validation error or user already exists
+
+  /auth/login:
+    post:
+      summary: Login user
+      description: Returns JWT access token (15m expiry) and refresh token (7d expiry).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Invalid email or password
+
+  /auth/refresh:
+    post:
+      summary: Rotate JWT Tokens
+      description: Issues a new rotated accessToken and refreshToken. Old token is automatically revoked.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Tokens rotated successfully
+        '401':
+          description: Invalid or reuse of revoked refresh token
+
+  /auth/logout:
+    post:
+      summary: Log out user
+      description: Revokes the specified refresh token in the database.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Logged out successfully
+
+  /auth/users:
+    get:
+      summary: Get Organization Users
+      description: Retrieves all users belonging to the caller's organization.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Users list retrieved successfully
+        '401':
+          description: Unauthorized
+
+  /projects:
+    post:
+      summary: Create Project
+      description: Bootstraps a new project workspace. Restricted to ADMIN and MANAGER roles.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Project created successfully
+        '403':
+          description: Forbidden for MEMBERS
+    get:
+      summary: List Projects
+      description: Retrieves all projects inside the user's organization.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Projects list retrieved successfully
+
+  /tasks:
+    post:
+      summary: Create Task
+      description: Adds a new task to the project. Restricted to ADMIN and MANAGER.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - projectId
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                priority:
+                  type: string
+                  enum: [LOW, MEDIUM, HIGH]
+                  default: MEDIUM
+                dueDate:
+                  type: string
+                  format: date
+                projectId:
+                  type: string
+                assigneeId:
+                  type: string
+      responses:
+        '201':
+          description: Task created successfully
+    get:
+      summary: Query Tasks (Scoped / Cached)
+      description: Returns tasks list in the organization with pagination and filters. Members are scoped only to their own tasks. Cache hits serve from Redis.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [TODO, IN_PROGRESS, IN_REVIEW, DONE, BLOCKED]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH]
+        - name: assignee
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tasks list retrieved successfully
+
+  /tasks/{id}:
+    get:
+      summary: Get Single Task
+      description: Retrieves rich task details by UUID. Checked against tenant boundaries.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task retrieved successfully
+    patch:
+      summary: Update Task Card
+      description: Modifies task parameters or updates board status. Modifying attributes requires ADMIN/MANAGER. Modifying status is allowed for Assignees, Managers, and Admins.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                priority:
+                  type: string
+                  enum: [LOW, MEDIUM, HIGH]
+                dueDate:
+                  type: string
+                  format: date
+                assigneeId:
+                  type: string
+                status:
+                  type: string
+                  enum: [TODO, IN_PROGRESS, IN_REVIEW, DONE, BLOCKED]
+      responses:
+        '200':
+          description: Task updated successfully
+        '403':
+          description: Forbidden due to role boundaries
+    delete:
+      summary: Delete Task
+      description: Removes task from SQLite. Restricted to ADMIN and MANAGER.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task deleted successfully
+
+  /notifications/subscribe:
+    get:
+      summary: Subscribe to Live SSE Notifications
+      description: Starts a persistent Server-Sent Events stream to push status transitions to the assigned member in real-time.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: SSE streaming active
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
