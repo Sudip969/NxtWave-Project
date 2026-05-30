@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const initializeDatabase = require('./config/dbInit');
 const seedDatabase = require('./config/seed');
+const { connectRedis } = require('./config/redis');
 
 const authRoutes = require('./routes/authRoutes');
 const projectRoutes = require('./routes/projectRoutes');
@@ -46,6 +47,9 @@ app.use(errorHandler);
 // Database Auto-Initialization & Bootstrap Seeding
 async function startServer() {
   try {
+    // Connect to Redis
+    await connectRedis();
+
     // 1. Initialise tables & indices
     await initializeDatabase();
     

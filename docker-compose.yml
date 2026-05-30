@@ -1,4 +1,10 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+
   backend-api:
     build:
       context: ./backend
@@ -11,6 +17,9 @@ services:
       JWT_ACCESS_SECRET: access_secret_key
       JWT_REFRESH_SECRET: refresh_secret_key
       NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
 
   frontend-client:
     build:

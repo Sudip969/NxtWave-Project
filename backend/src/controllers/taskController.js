@@ -1,6 +1,26 @@
 const { query } = require('../config/db');
 const { AppError } = require('../utils/errors');
 const { sseClients } = require('./notificationController'); // We will define this next
+const { redisClient, getIsRedisConnected } = require('../config/redis');
+
+const invalidateTaskCache = async (orgId, taskId = null) => {
+  if (!getIsRedisConnected()) return;
+  try {
+    const pattern = `tasks:org:${orgId}:*`;
+    const keys = await redisClient.keys(pattern);
+    if (keys && keys.length > 0) {
+      await redisClient.del(keys);
+      console.log(`--- [Redis Cache Invalidation] Cleared ${keys.length} list keys for org: ${orgId} ---`);
+    }
+    if (taskId) {
+      const taskKey = `tasks:task:${taskId}`;
+      await redisClient.del(taskKey);
+      console.log(`--- [Redis Cache Invalidation] Cleared task key: ${taskKey} ---`);
+    }
+  } catch (err) {
+    console.error('Redis cache invalidation error:', err.message);
+  }
+};
 
 // Transition State Machine Mapping
 const VALID_TRANSITIONS = {
@@ -76,6 +96,8 @@ const createTask = async (req, res, next) => {
 
 
 
+    await invalidateTaskCache(orgId);
+
     res.status(201).json({
       status: 201,
       message: 'Task created successfully',
@@ -94,6 +116,21 @@ const getTasks = async (req, res, next) => {
     const parsedPage = Math.max(1, parseInt(page));
     const parsedLimit = Math.max(1, Math.min(100, parseInt(limit)));
     const offset = (parsedPage - 1) * parsedLimit;
+
+    const isRedisActive = getIsRedisConnected();
+    const cacheKey = `tasks:org:${orgId}:page:${parsedPage}:limit:${parsedLimit}:status:${status || ''}:priority:${priority || ''}:assignee:${assignee || ''}`;
+
+    if (isRedisActive) {
+      try {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+          console.log(`--- [Redis Cache Hit] tasks for org: ${orgId} ---`);
+          return res.status(200).json(JSON.parse(cachedData));
+        }
+      } catch (err) {
+        console.error('Redis cache get error:', err.message);
+      }
+    }
 
 
 
@@ -158,6 +195,17 @@ const getTasks = async (req, res, next) => {
 
 
 
+    if (isRedisActive) {
+      try {
+        await redisClient.set(cacheKey, JSON.stringify(responsePayload), {
+          EX: 300
+        });
+        console.log(`--- [Redis Cache Miss / Set] stored tasks for org: ${orgId} ---`);
+      } catch (err) {
+        console.error('Redis cache set error:', err.message);
+      }
+    }
+
     res.status(200).json(responsePayload);
   } catch (err) {
     next(err);
@@ -172,6 +220,22 @@ const getTaskById = async (req, res, next) => {
     if (!req.targetTask) {
       console.error('ERROR: req.targetTask is undefined!');
       return next(new AppError(500, 'INTERNAL_SERVER_ERROR', 'Task context is missing'));
+    }
+
+    const isRedisActive = getIsRedisConnected();
+    const taskId = req.params.id;
+    const cacheKey = `tasks:task:${taskId}`;
+
+    if (isRedisActive) {
+      try {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+          console.log(`--- [Redis Cache Hit] task: ${taskId} ---`);
+          return res.status(200).json(JSON.parse(cachedData));
+        }
+      } catch (err) {
+        console.error('Redis cache get error:', err.message);
+      }
     }
 
     // req.targetTask is pre-populated by requireTaskAccess middleware!
@@ -190,10 +254,23 @@ const getTaskById = async (req, res, next) => {
       [req.params.id]
     );
 
-    res.status(200).json({
+    const responsePayload = {
       status: 200,
       data: { task: taskRes.rows[0] }
-    });
+    };
+
+    if (isRedisActive) {
+      try {
+        await redisClient.set(cacheKey, JSON.stringify(responsePayload), {
+          EX: 300
+        });
+        console.log(`--- [Redis Cache Miss / Set] stored task: ${taskId} ---`);
+      } catch (err) {
+        console.error('Redis cache set error:', err.message);
+      }
+    }
+
+    res.status(200).json(responsePayload);
   } catch (err) {
     console.error('getTaskById Exception:', err);
     next(err);
@@ -307,6 +384,8 @@ const updateTask = async (req, res, next) => {
 
 
 
+    await invalidateTaskCache(orgId, task.id);
+
     res.status(200).json({
       status: 200,
       message: 'Task updated successfully',
@@ -326,6 +405,8 @@ const deleteTask = async (req, res, next) => {
     await query('DELETE FROM tasks WHERE id = $1', [task.id]);
 
 
+
+    await invalidateTaskCache(orgId, task.id);
 
     res.status(200).json({
       status: 200,
