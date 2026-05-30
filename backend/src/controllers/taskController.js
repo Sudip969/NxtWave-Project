@@ -295,6 +295,14 @@ const updateTask = async (req, res, next) => {
       return next(new AppError(403, 'FORBIDDEN', 'Access denied. Members can only transition task status.'));
     }
 
+    // 1b. If status is changing, only ADMIN, MANAGER, and the task's assignee can change it
+    if (status !== undefined && status !== task.status) {
+      const isAssignee = task.assignee_id === req.user.id;
+      if (!isManagerOrAdmin && !isAssignee) {
+        return next(new AppError(403, 'FORBIDDEN', 'Access denied. Only the Admin, Manager, or the Task Assignee can change the status.'));
+      }
+    }
+
     // 2. Validate new assignee (if changed)
     if (assigneeId !== undefined && assigneeId !== task.assignee_id) {
       if (assigneeId !== null) {

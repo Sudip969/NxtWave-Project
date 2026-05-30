@@ -33,6 +33,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Filters & Pagination State
   const [filterPriority, setFilterPriority] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterAssignee, setFilterAssignee] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -93,20 +94,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     fetchProj();
   }, [projectId]);
 
-  // Fetch Organization Users for assigning tasks
+  // Fetch Organization Users for assigning tasks & filtering
   useEffect(() => {
-    if (isManagerOrAdmin) {
-      const fetchOrgUsers = async () => {
-        try {
-          const res = await api.analytics.get();
-          setOrgUsers(res.data.overdueTasksPerUser || []);
-        } catch (e) {
-          console.error('Failed to load org members:', e);
-        }
-      };
-      fetchOrgUsers();
-    }
-  }, [isManagerOrAdmin]);
+    const fetchOrgUsers = async () => {
+      try {
+        const res = await api.analytics.get();
+        setOrgUsers(res.data.overdueTasksPerUser || []);
+      } catch (e) {
+        console.error('Failed to load org members:', e);
+      }
+    };
+    fetchOrgUsers();
+  }, [refreshTrigger]);
 
   // Load tasks on filter changes or refresh triggers
   useEffect(() => {
@@ -120,6 +119,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           projectId,
           priority: filterPriority || undefined,
           status: filterStatus || undefined,
+          assignee: filterAssignee || undefined,
           page,
           limit: 15 // Board layout capacity
         });
@@ -132,7 +132,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
     };
     fetchTasks();
-  }, [projectId, filterPriority, filterStatus, page, refreshTrigger]);
+  }, [projectId, filterPriority, filterStatus, filterAssignee, page, refreshTrigger]);
 
   const handleTaskClick = async (taskId: string) => {
     setEditError(null);
@@ -149,7 +149,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       setEditDesc(task.description || '');
       setEditPriority(task.priority || 'MEDIUM');
       setEditStatus(task.status || 'TODO');
-      
+
       if (task.due_date) {
         const d = new Date(task.due_date);
         const yyyy = d.getFullYear();
@@ -283,13 +283,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               </div>
             </div>
             <div className="d-flex gap-2 flex-wrap">
-              <select className="form-select form-select-sm w-auto" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+              <select className="form-select form-select-sm w-auto" value={filterPriority} onChange={(e) => { setFilterPriority(e.target.value); setPage(1); }}>
                 <option value="">All Priorities</option>
                 <option value="LOW">LOW</option>
                 <option value="MEDIUM">MEDIUM</option>
                 <option value="HIGH">HIGH</option>
               </select>
-              <select className="form-select form-select-sm w-auto" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+              <select className="form-select form-select-sm w-auto" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}>
                 <option value="">All Statuses</option>
                 <option value="TODO">TODO</option>
                 <option value="IN_PROGRESS">IN_PROGRESS</option>
@@ -297,7 +297,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <option value="DONE">DONE</option>
                 <option value="BLOCKED">BLOCKED</option>
               </select>
-              <button className="btn btn-outline-light btn-sm px-2.5" onClick={() => { setFilterPriority(''); setFilterStatus(''); setPage(1); }}>
+              <select className="form-select form-select-sm w-auto" value={filterAssignee} onChange={(e) => { setFilterAssignee(e.target.value); setPage(1); }}>
+                <option value="">All Assignees</option>
+                {orgUsers.map((u) => (
+                  <option key={u.user_id} value={u.user_id}>
+                    {u.user_name}
+                  </option>
+                ))}
+              </select>
+              <button className="btn btn-outline-light btn-sm px-2.5" onClick={() => { setFilterPriority(''); setFilterStatus(''); setFilterAssignee(''); setPage(1); }}>
                 Clear Filters
               </button>
             </div>
@@ -371,7 +379,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   {editError && (
                     <div className="alert alert-danger border-0 p-2.5 fs-7 mb-3">{editError}</div>
                   )}
-                  
+
                   <div className="mb-3">
                     <label className="form-label text-secondary fs-7.5">Task Title</label>
                     <input
@@ -460,7 +468,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           }}
                           value={editStatus}
                           onChange={(e) => setEditStatus(e.target.value)}
-                          disabled={transitioning}
+                          disabled={transitioning || !(isManagerOrAdmin || selectedTask?.assignee_id === user.id)}
                         >
                           {COLUMNS.map((col) => (
                             <option key={col.id} value={col.id} className="bg-dark text-white">
@@ -475,6 +483,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         </div>
                       )}
                     </div>
+                    {!(isManagerOrAdmin || selectedTask?.assignee_id === user.id) && (
+                      <span className="text-warning fs-8.5 d-block fw-semibold mt-2" style={{ fontSize: '0.75rem' }}>
+                        <i className="bi bi-exclamation-triangle me-1"></i>
+                        Status updates restricted. Only the Assignee, Managers, or Admins can transition this task.
+                      </span>
+                    )}
                   </div>
 
                   <div className="modal-footer border-0 pt-3 px-0 d-flex justify-content-between">
@@ -502,7 +516,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       <button
                         type="submit"
                         className="btn btn-glow-cyan btn-sm px-4"
-                        disabled={transitioning}
+                        disabled={transitioning || !(isManagerOrAdmin || selectedTask?.assignee_id === user.id)}
                       >
                         Save
                       </button>

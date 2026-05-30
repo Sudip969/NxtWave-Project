@@ -111,7 +111,7 @@ describe('Team Task Tracker API Integration Tests', () => {
       );
     });
 
-    test('MEMBER - Should allow changing status of a task not assigned to them', async () => {
+    test('MEMBER - Should NOT allow changing status of a task not assigned to them', async () => {
       // Mock route auth profile fetch and task details check
       db.query.mockImplementation((text, params) => {
         if (text.includes('SELECT id, email, name, role, organization_id FROM users')) {
@@ -151,9 +151,9 @@ describe('Team Task Tracker API Integration Tests', () => {
         .set('Authorization', `Bearer ${mockMemberToken}`)
         .send({ status: 'IN_PROGRESS' });
 
-      // Should succeed with 200 OK since card status changes are allowed by everyone
-      expect(res.status).toBe(200);
-      expect(res.body.data.task.status).toBe('IN_PROGRESS');
+      // Should fail with 403 Forbidden since the member is not the assignee
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain('Access denied');
     });
 
     test('Transitions - Should succeed when trying to transition state directly (TODO -> DONE)', async () => {

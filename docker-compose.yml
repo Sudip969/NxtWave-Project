@@ -18,6 +18,8 @@ services:
       JWT_REFRESH_SECRET: refresh_secret_key
       NODE_ENV: production
       REDIS_URL: redis://redis:6379
+    volumes:
+      - ./backend/tasktracker.db:/app/tasktracker.db
     depends_on:
       - redis
 
