@@ -12,7 +12,7 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<TabView>('dashboard');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  
+
   // Dynamic refresh trigger to force child components to reload when events occur
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -36,7 +36,7 @@ export const App: React.FC = () => {
       setDialogMessage('Your session has expired. Please sign in again.');
       setDialogOpen(true);
     };
-    
+
     window.addEventListener('auth-expired', handleAuthExpired);
     return () => window.removeEventListener('auth-expired', handleAuthExpired);
   }, []);
@@ -79,7 +79,7 @@ export const App: React.FC = () => {
               <span className="d-block text-white fw-semibold fs-7">{user.name}</span>
               <span className="d-block text-muted fs-8">{user.role}</span>
             </div>
-            
+
             <button className="btn btn-outline-danger btn-sm px-3 border-0 rounded-circle py-2" onClick={handleLogout} title="Sign Out">
               <i className="bi bi-box-arrow-right fs-5"></i>
             </button>
@@ -118,7 +118,7 @@ export const App: React.FC = () => {
             triggerRefresh={triggerRefresh}
           />
         )}
-        
+
         {activeTab === 'board' && (
           <KanbanBoard
             user={user}
@@ -144,7 +144,7 @@ export const App: React.FC = () => {
 
       {/* Responsive footer */}
       <footer className="py-3 text-center border-top fs-8 text-secondary mt-auto" style={{ background: 'rgba(10,12,16,0.95)', borderColor: 'rgba(255,255,255,0.03) !important' }}>
-        &copy; {new Date().getFullYear()} NxtWave Task Tracker. SDE II Take-Home Core Solution.
+        NxtWave Task Tracker. SDE II.
       </footer>
     </div>
   );
