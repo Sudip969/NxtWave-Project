@@ -172,9 +172,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setTransitioning(true);
 
     try {
-      const payload = {
-        status: editStatus
-      };
+      const payload: any = {};
+      if (isManagerOrAdmin) {
+        payload.title = editTitle;
+        payload.description = editDesc;
+        payload.priority = editPriority;
+        payload.dueDate = editDueDate || null;
+        payload.assigneeId = editAssignee || null;
+        payload.status = editStatus;
+      } else {
+        payload.status = editStatus;
+      }
 
       await api.tasks.update(selectedTask.id, payload);
 
@@ -365,36 +373,75 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   )}
                   
                   <div className="mb-3">
-                    <h5 className="fw-bold text-white mb-2">{selectedTask.title}</h5>
-                    <p className="text-secondary fs-7.5 mb-0" style={{ whiteSpace: 'pre-wrap' }}>
-                      {selectedTask.description || 'No description provided.'}
-                    </p>
+                    <label className="form-label text-secondary fs-7.5">Task Title</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      disabled={!isManagerOrAdmin}
+                      required
+                    />
                   </div>
 
-                  <div className="row g-3 mb-4">
+                  <div className="mb-3">
+                    <label className="form-label text-secondary fs-7.5">Description</label>
+                    <textarea
+                      className="form-control"
+                      rows={3}
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      disabled={!isManagerOrAdmin}
+                    ></textarea>
+                  </div>
+
+                  <div className="row mb-3">
                     <div className="col-6 text-start">
-                      <span className="text-secondary d-block fs-8 mb-1">Priority</span>
-                      <span className={`badge bg-${getPriorityColor(selectedTask.priority)} px-2.5 py-1.5 fs-8`}>
-                        {selectedTask.priority}
-                      </span>
+                      <label className="form-label text-secondary fs-7.5">Priority</label>
+                      <select
+                        className="form-select"
+                        value={editPriority}
+                        onChange={(e) => setEditPriority(e.target.value)}
+                        disabled={!isManagerOrAdmin}
+                      >
+                        <option value="LOW">LOW</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HIGH">HIGH</option>
+                      </select>
                     </div>
 
                     <div className="col-6 text-start">
-                      <span className="text-secondary d-block fs-8 mb-1">Due Date</span>
-                      <span className="text-white fs-7.5 fw-medium">
-                        {selectedTask.due_date 
-                          ? new Date(selectedTask.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-                          : 'No due date'}
-                      </span>
+                      <label className="form-label text-secondary fs-7.5">Due Date</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={editDueDate}
+                        onChange={(e) => setEditDueDate(e.target.value)}
+                        disabled={!isManagerOrAdmin}
+                      />
                     </div>
                   </div>
 
-                  <div className="mb-4 text-start">
-                    <span className="text-secondary d-block fs-8 mb-1">Assignee</span>
-                    <span className="text-white fs-7.5 fw-medium d-flex align-items-center gap-2">
-                      <i className="bi bi-person-circle text-cyan fs-6"></i>
-                      {selectedTask.assignee_name || 'Unassigned'}
-                    </span>
+                  <div className="mb-3 text-start">
+                    <label className="form-label text-secondary fs-7.5">Assignee</label>
+                    <select
+                      className="form-select"
+                      value={editAssignee}
+                      onChange={(e) => setEditAssignee(e.target.value)}
+                      disabled={!isManagerOrAdmin}
+                    >
+                      <option value="">-- Unassigned --</option>
+                      {selectedTask?.assignee_id && !orgUsers.some(u => u.user_id === selectedTask.assignee_id) && (
+                        <option value={selectedTask.assignee_id}>
+                          {selectedTask.assignee_name || 'Assigned Member'}
+                        </option>
+                      )}
+                      {orgUsers.map((u) => (
+                        <option key={u.user_id} value={u.user_id}>
+                          {u.user_name} ({u.user_email})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Status Dropdown */}
@@ -430,8 +477,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     </div>
                   </div>
 
-                  <div className="modal-footer border-0 pt-3 px-0 d-flex justify-content-end">
-                    <div></div>
+                  <div className="modal-footer border-0 pt-3 px-0 d-flex justify-content-between">
+                    <div>
+                      {isManagerOrAdmin && (
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm px-3"
+                          onClick={() => handleDeleteTask(selectedTask.id)}
+                          disabled={transitioning}
+                        >
+                          <i className="bi bi-trash-fill me-1"></i> Delete Task
+                        </button>
+                      )}
+                    </div>
                     <div className="d-flex gap-2">
                       <button
                         type="button"

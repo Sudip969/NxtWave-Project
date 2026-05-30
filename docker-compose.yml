@@ -1,0 +1,23 @@
+services:
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-api
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      JWT_ACCESS_SECRET: access_secret_key
+      JWT_REFRESH_SECRET: refresh_secret_key
+      NODE_ENV: production
+
+  frontend-client:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-client
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-api
